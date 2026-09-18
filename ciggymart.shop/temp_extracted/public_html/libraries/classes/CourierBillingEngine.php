@@ -1,0 +1,399 @@
+<?php
+require_once(dirname(__FILE__) . '/DBConn.php');
+
+class CourierBillingEngine {
+    private $db;
+    private $settingsCache = null;
+
+    public function __construct($db = null) {
+        $this->db = $db ? $db : new DBConn();
+    }
+
+    /**
+     * Get system setting value by key
+     */
+    public function getSetting($key, $default = '') {
+        if ($this->settingsCache === null) {
+            $this->settingsCache = [];
+            $res = $this->db->ExecuteQuery("SELECT Setting_Key, Setting_Value FROM tbl_settings");
+            if (!empty($res)) {
+                foreach ($res as $row) {
+                    $this->settingsCache[$row['Setting_Key']] = $row['Setting_Value'];
+                }
+            }
+        }
+        return isset($this->settingsCache[$key]) ? $this->settingsCache[$key] : $default;
+    }
+
+    /**
+     * Calculate Volumetric Weight and Chargeable Weight
+     */
+    public function calculateWeight($actualWeight, $length = 0, $width = 0, $height = 0, $divisor = null) {
+        $actualWeight = floatval($actualWeight);
+        $length = floatval($length);
+        $width = floatval($width);
+        $height = floatval($height);
+
+        if ($divisor === null || floatval($divisor) <= 0) {
+            $divisor = floatval($this->getSetting('volumetric_divisor', 5000));
+            if ($divisor <= 0) $divisor = 5000;
+        }
+
+        $volumetricWeight = 0;
+        if ($length > 0 && $width > 0 && $height > 0) {
+            $volumetricWeight = round(($length * $width * $height) / $divisor, 3);
+        }
+
+        $chargeableWeight = max($actualWeight, $volumetricWeight);
+        if ($chargeableWeight <= 0) $chargeableWeight = $actualWeight;
+
+        return [
+            'actual_weight' => $actualWeight,
+            'length' => $length,
+            'width' => $width,
+            'height' => $height,
+            'divisor' => $divisor,
+            'volumetric_weight' => $volumetricWeight,
+            'chargeable_weight' => $chargeableWeight
+        ];
+    }
+
+    /**
+     * Check if destination or pincode is ODA and get ODA charge
+     */
+    public function checkODA($destinationId = 0, $destinationName = '', $pincode = '') {
+        $isODA = false;
+        $odaCharge = 0.0;
+        $defaultODA = floatval($this->getSetting('default_oda_charge', 150.00));
+
+        // 1. Check by Pincode in ODA Master
+        if (!empty($pincode)) {
+            $safePin = $this->db->escape(trim($pincode));
+            $res = $this->db->ExecuteQuery("SELECT ODA_Charge, Is_ODA FROM tbl_oda_master WHERE Pincode='$safePin' AND Is_Active=1");
+            if (!empty($res) && isset($res[1])) {
+                $isODA = ($res[1]['Is_ODA'] == 1);
+                $odaCharge = floatval($res[1]['ODA_Charge'] > 0 ? $res[1]['ODA_Charge'] : $defaultODA);
+                return ['is_oda' => $isODA, 'oda_charge' => ($isODA ? $odaCharge : 0.0)];
+            }
+        }
+
+        // 2. Check by Destination Name in ODA Master
+        if (!empty($destinationName)) {
+            $safeName = $this->db->escape(trim($destinationName));
+            $res = $this->db->ExecuteQuery("SELECT ODA_Charge, Is_ODA FROM tbl_oda_master WHERE City LIKE '%$safeName%' AND Is_Active=1");
+            if (!empty($res) && isset($res[1])) {
+                $isODA = ($res[1]['Is_ODA'] == 1);
+                $odaCharge = floatval($res[1]['ODA_Charge'] > 0 ? $res[1]['ODA_Charge'] : $defaultODA);
+                return ['is_oda' => $isODA, 'oda_charge' => ($isODA ? $odaCharge : 0.0)];
+            }
+        }
+
+        // 3. Check Destination table
+        if (!empty($destinationId)) {
+            $res = $this->db->ExecuteQuery("SELECT Is_ODA, ODA_Charge FROM tbl_destinations WHERE Destination_Id=".intval($destinationId));
+            if (!empty($res) && isset($res[1]) && $res[1]['Is_ODA'] == 1) {
+                $isODA = true;
+                $odaCharge = floatval($res[1]['ODA_Charge'] > 0 ? $res[1]['ODA_Charge'] : $defaultODA);
+                return ['is_oda' => $isODA, 'oda_charge' => $odaCharge];
+            }
+        }
+
+        return ['is_oda' => false, 'oda_charge' => 0.0];
+    }
+
+    /**
+     * Get applicable Pickup charge
+     */
+    public function getPickupCharge($clientId = 0) {
+        $defaultPickup = floatval($this->getSetting('default_pickup_charge', 0.00));
+        if ($clientId > 0) {
+            $res = $this->db->ExecuteQuery("SELECT Pickup_Charge FROM tbl_clients WHERE Client_Id=".intval($clientId));
+            if (!empty($res) && isset($res[1]['Pickup_Charge']) && floatval($res[1]['Pickup_Charge']) > 0) {
+                return floatval($res[1]['Pickup_Charge']);
+            }
+            $res2 = $this->db->ExecuteQuery("SELECT Default_Charge FROM tbl_pickup_charges WHERE Client_Id=".intval($clientId)." AND Is_Active=1");
+            if (!empty($res2) && isset($res2[1]['Default_Charge'])) {
+                return floatval($res2[1]['Default_Charge']);
+            }
+        }
+        return $defaultPickup;
+    }
+
+    /**
+     * Get applicable Door Delivery charge
+     */
+    public function getDoorDeliveryCharge($destId = 0, $clientId = 0) {
+        $defaultDoor = floatval($this->getSetting('default_door_delivery_charge', 0.00));
+        if ($destId > 0) {
+            $res = $this->db->ExecuteQuery("SELECT Door_Delivery_Charge FROM tbl_destinations WHERE Destination_Id=".intval($destId));
+            if (!empty($res) && isset($res[1]['Door_Delivery_Charge']) && floatval($res[1]['Door_Delivery_Charge']) > 0) {
+                return floatval($res[1]['Door_Delivery_Charge']);
+            }
+            $res2 = $this->db->ExecuteQuery("SELECT Door_Charge FROM tbl_door_delivery_charges WHERE Destination_Id=".intval($destId)." AND Is_Active=1");
+            if (!empty($res2) && isset($res2[1]['Door_Charge'])) {
+                return floatval($res2[1]['Door_Charge']);
+            }
+        }
+        if ($clientId > 0) {
+            $res3 = $this->db->ExecuteQuery("SELECT Door_Delivery_Charge FROM tbl_clients WHERE Client_Id=".intval($clientId));
+            if (!empty($res3) && isset($res3[1]['Door_Delivery_Charge']) && floatval($res3[1]['Door_Delivery_Charge']) > 0) {
+                return floatval($res3[1]['Door_Delivery_Charge']);
+            }
+        }
+        return $defaultDoor;
+    }
+
+    /**
+     * Get applicable Docket charge
+     */
+    public function getDocketCharge($clientId = 0) {
+        $defaultDocket = floatval($this->getSetting('default_docket_charge', 50.00));
+        if ($clientId > 0) {
+            $res = $this->db->ExecuteQuery("SELECT Docket_Charge FROM tbl_clients WHERE Client_Id=".intval($clientId));
+            if (!empty($res) && isset($res[1]['Docket_Charge']) && floatval($res[1]['Docket_Charge']) > 0) {
+                return floatval($res[1]['Docket_Charge']);
+            }
+            $res2 = $this->db->ExecuteQuery("SELECT Default_Charge FROM tbl_docket_charges WHERE Client_Id=".intval($clientId)." AND Is_Active=1");
+            if (!empty($res2) && isset($res2[1]['Default_Charge'])) {
+                return floatval($res2[1]['Default_Charge']);
+            }
+        }
+        return $defaultDocket;
+    }
+
+    /**
+     * Calculate Insurance premium
+     */
+    public function calculateInsurance($insuredValue, $clientId = 0, $customRate = null) {
+        $insuredValue = floatval($insuredValue);
+        if ($insuredValue <= 0) {
+            return ['insured_value' => 0.0, 'insurance_rate' => 0.0, 'insurance_premium' => 0.0];
+        }
+
+        $rate = 0.0;
+        if ($customRate !== null && floatval($customRate) > 0) {
+            $rate = floatval($customRate);
+        } else if ($clientId > 0) {
+            $res = $this->db->ExecuteQuery("SELECT Insurance_Percent FROM tbl_clients WHERE Client_Id=".intval($clientId));
+            if (!empty($res) && isset($res[1]['Insurance_Percent']) && floatval($res[1]['Insurance_Percent']) > 0) {
+                $rate = floatval($res[1]['Insurance_Percent']);
+            }
+        }
+
+        if ($rate <= 0) {
+            $rate = floatval($this->getSetting('default_insurance_percent', 2.00));
+        }
+
+        $premium = round(($insuredValue * $rate) / 100, 2);
+        return [
+            'insured_value' => $insuredValue,
+            'insurance_rate' => $rate,
+            'insurance_premium' => $premium
+        ];
+    }
+
+    /**
+     * Calculate Base Freight using Rate Slabs
+     */
+    public function calculateBaseFreight($branchId, $clientId, $destId, $sendBy, $weight) {
+        require_once(dirname(__FILE__) . '/rate.php');
+        $rateClass = new rate();
+        
+        ob_start();
+        $rateClass->getSubtotal($branchId, $clientId, $destId, $sendBy, $weight);
+        $rawOutput = trim(ob_get_clean());
+        
+        $freight = floatval($rawOutput);
+        return $freight;
+    }
+
+    /**
+     * Complete Booking Calculation
+     */
+    public function computeBookingCharges($data) {
+        $branchId = isset($data['branch_id']) ? intval($data['branch_id']) : 0;
+        $clientId = isset($data['client_id']) ? intval($data['client_id']) : 0;
+        $destId = isset($data['dest_id']) ? intval($data['dest_id']) : 0;
+        $sendBy = isset($data['send_by']) ? intval($data['send_by']) : 1;
+        $actualWeight = isset($data['actual_weight']) ? floatval($data['actual_weight']) : (isset($data['weight']) ? floatval($data['weight']) : 0.0);
+        $length = isset($data['length']) ? floatval($data['length']) : 0.0;
+        $width = isset($data['width']) ? floatval($data['width']) : 0.0;
+        $height = isset($data['height']) ? floatval($data['height']) : 0.0;
+
+        // Weight
+        $weightCalc = $this->calculateWeight($actualWeight, $length, $width, $height);
+        $chargeableWeight = $weightCalc['chargeable_weight'];
+
+        // Base Freight
+        $baseFreight = 0.0;
+        if ($branchId > 0 && $clientId > 0 && $destId > 0 && $chargeableWeight > 0) {
+            $baseFreight = $this->calculateBaseFreight($branchId, $clientId, $destId, $sendBy, $chargeableWeight);
+        } else if (isset($data['subtotal']) && floatval($data['subtotal']) > 0) {
+            $baseFreight = floatval($data['subtotal']);
+        }
+
+        // Discounts
+        $discountPercent = isset($data['discount_percent']) ? floatval($data['discount_percent']) : 0.0;
+        $discountRs = isset($data['discount_rs']) ? floatval($data['discount_rs']) : 0.0;
+        $discountAmt = 0.0;
+
+        if ($discountPercent > 0) {
+            $discountAmt = round(($baseFreight * $discountPercent) / 100, 2);
+        } else if ($discountRs > 0) {
+            $discountAmt = $discountRs;
+        }
+        $freightAfterDiscount = max(0, $baseFreight - $discountAmt);
+
+        // Additional Charges
+        $pickupCharge = isset($data['pickup_charge']) ? floatval($data['pickup_charge']) : $this->getPickupCharge($clientId);
+        $doorCharge = isset($data['door_charge']) ? floatval($data['door_charge']) : $this->getDoorDeliveryCharge($destId, $clientId);
+        $docketCharge = isset($data['docket_charge']) ? floatval($data['docket_charge']) : $this->getDocketCharge($clientId);
+        
+        $oda = $this->checkODA($destId, isset($data['dest_name']) ? $data['dest_name'] : '', isset($data['pincode']) ? $data['pincode'] : '');
+        $odaCharge = isset($data['oda_charge']) ? floatval($data['oda_charge']) : ($oda['is_oda'] ? $oda['oda_charge'] : 0.0);
+
+        // Insurance
+        $isInsured = !empty($data['is_insured']) && $data['is_insured'] == 1;
+        $insuredValue = $isInsured && isset($data['insured_value']) ? floatval($data['insured_value']) : 0.0;
+        $insCalc = $this->calculateInsurance($insuredValue, $clientId, isset($data['insurance_rate']) ? $data['insurance_rate'] : null);
+        $insuranceCharge = $isInsured ? $insCalc['insurance_premium'] : 0.0;
+
+        $otherCharges = isset($data['other_charges']) ? floatval($data['other_charges']) : 0.0;
+
+        $totalAmount = $freightAfterDiscount + $pickupCharge + $doorCharge + $docketCharge + $odaCharge + $insuranceCharge + $otherCharges;
+
+        return [
+            'weight_details' => $weightCalc,
+            'base_freight' => $baseFreight,
+            'discount_percent' => $discountPercent,
+            'discount_rs' => $discountRs,
+            'discount_amount' => $discountAmt,
+            'freight_after_discount' => $freightAfterDiscount,
+            'pickup_charge' => $pickupCharge,
+            'door_delivery_charge' => $doorCharge,
+            'docket_charge' => $docketCharge,
+            'oda_details' => $oda,
+            'oda_charge' => $odaCharge,
+            'insurance_details' => $insCalc,
+            'insurance_charge' => $insuranceCharge,
+            'other_charges' => $otherCharges,
+            'total_amount' => round($totalAmount, 2)
+        ];
+    }
+
+    /**
+     * Compute GST tax breakdown
+     */
+    public function computeGST($subtotal, $isWithinState = true, $hsnCode = '996812') {
+        $subtotal = floatval($subtotal);
+        $hsn = $this->db->ExecuteQuery("SELECT * FROM tbl_hsn_master WHERE HSN_Code='".$this->db->escape($hsnCode)."' AND Is_Active=1");
+        
+        $gstRate = 18.00;
+        $cgstRate = 9.00;
+        $sgstRate = 9.00;
+        $igstRate = 18.00;
+
+        if (!empty($hsn) && isset($hsn[1])) {
+            $gstRate = floatval($hsn[1]['GST_Percent']);
+            $cgstRate = floatval($hsn[1]['CGST_Percent']);
+            $sgstRate = floatval($hsn[1]['SGST_Percent']);
+            $igstRate = floatval($hsn[1]['IGST_Percent']);
+        } else {
+            $tax = $this->db->ExecuteQuery("SELECT * FROM tbl_taxes");
+            if (!empty($tax) && isset($tax[1])) {
+                $igstRate = isset($tax[1]['IGST']) ? floatval($tax[1]['IGST']) : 18.00;
+                $cgstRate = isset($tax[1]['CGST']) ? floatval($tax[1]['CGST']) : 9.00;
+                $sgstRate = isset($tax[1]['SGST']) ? floatval($tax[1]['SGST']) : 9.00;
+                $gstRate = $igstRate;
+            }
+        }
+
+        if ($isWithinState) {
+            $cgst = round(($subtotal * $cgstRate) / 100, 2);
+            $sgst = round(($subtotal * $sgstRate) / 100, 2);
+            $igst = 0.00;
+            $totalTax = $cgst + $sgst;
+        } else {
+            $cgst = 0.00;
+            $sgst = 0.00;
+            $igst = round(($subtotal * $igstRate) / 100, 2);
+            $totalTax = $igst;
+        }
+
+        $grandTotal = round($subtotal + $totalTax, 2);
+
+        return [
+            'subtotal' => $subtotal,
+            'is_within_state' => $isWithinState,
+            'hsn_code' => $hsnCode,
+            'gst_rate' => $gstRate,
+            'cgst_rate' => $cgstRate,
+            'cgst_amount' => $cgst,
+            'sgst_rate' => $sgstRate,
+            'sgst_amount' => $sgst,
+            'igst_rate' => $igstRate,
+            'igst_amount' => $igst,
+            'total_tax' => $totalTax,
+            'grand_total' => $grandTotal
+        ];
+    }
+
+    /**
+     * Get Client Balance and Outstanding
+     */
+    public function getClientOutstanding($clientId) {
+        $clientId = intval($clientId);
+        $invRes = $this->db->ExecuteQuery("SELECT SUM(Final_Total_Amt) AS Total_Billed FROM tbl_invoices WHERE Client_Id=$clientId");
+        $totalBilled = (!empty($invRes) && isset($invRes[1]['Total_Billed'])) ? floatval($invRes[1]['Total_Billed']) : 0.0;
+
+        $payRes = $this->db->ExecuteQuery("SELECT SUM(Payment_Amount) AS Total_Paid FROM tbl_payment_receipts WHERE Client_Id=$clientId");
+        $totalPaid = (!empty($payRes) && isset($payRes[1]['Total_Paid'])) ? floatval($payRes[1]['Total_Paid']) : 0.0;
+
+        $outstanding = max(0, $totalBilled - $totalPaid);
+
+        return [
+            'client_id' => $clientId,
+            'total_billed' => $totalBilled,
+            'total_paid' => $totalPaid,
+            'outstanding' => $outstanding
+        ];
+    }
+
+    /**
+     * Number to Indian Rupees Words converter
+     */
+    public static function numberToWords($number) {
+        $decimal = round($number - ($no = floor($number)), 2) * 100;
+        $hundred = null;
+        $digits_length = strlen($no);
+        $i = 0;
+        $str = array();
+        $words = array(
+            0 => '', 1 => 'one', 2 => 'two',
+            3 => 'three', 4 => 'four', 5 => 'five', 6 => 'six',
+            7 => 'seven', 8 => 'eight', 9 => 'nine',
+            10 => 'ten', 11 => 'eleven', 12 => 'twelve',
+            13 => 'thirteen', 14 => 'fourteen', 15 => 'fifteen',
+            16 => 'sixteen', 17 => 'seventeen', 18 => 'eighteen',
+            19 => 'nineteen', 20 => 'twenty', 30 => 'thirty',
+            40 => 'forty', 50 => 'fifty', 60 => 'sixty',
+            70 => 'seventy', 80 => 'eighty', 90 => 'ninety'
+        );
+        $digits = array('', 'hundred', 'thousand', 'lakh', 'crore');
+        while ($i < $digits_length) {
+            $divider = ($i == 2) ? 10 : 100;
+            $number = floor($no % $divider);
+            $no = floor($no / $divider);
+            $i += $divider == 10 ? 1 : 2;
+            if ($number) {
+                $plural = (($counter = count($str)) && $number > 9) ? 's' : null;
+                $hundred = ($counter == 1 && $str[0]) ? ' and ' : null;
+                $str [] = ($number < 21) ? $words[$number] . ' ' . $digits[$counter] . $plural . ' ' . $hundred : $words[floor($number / 10) * 10] . ' ' . $words[$number % 10] . ' ' . $digits[$counter] . $plural . ' ' . $hundred;
+            } else $str[] = null;
+        }
+        $Rupees = implode('', array_reverse($str));
+        $paise = ($decimal > 0) ? "." . ($words[$decimal / 10] . " " . $words[$decimal % 10]) . ' Paise' : '';
+        return ($Rupees ? 'Rupees ' . trim($Rupees) : '') . ($paise ? ' and ' . trim($paise) : '') . ' Only';
+    }
+}
+?>

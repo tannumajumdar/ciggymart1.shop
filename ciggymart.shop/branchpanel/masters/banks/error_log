@@ -1,0 +1,18 @@
+[18-Jun-2017 11:27:29 Asia/Calcutta] PHP Notice:  Undefined index: buser in /home/suncroso/public_html/courier/branchpanel/include/header.php on line 34
+[18-Jun-2017 11:27:29 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/suncroso/public_html/courier/branchpanel/include/header.php on line 47
+[18-Jun-2017 11:27:29 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/suncroso/public_html/courier/branchpanel/include/header.php on line 48
+[18-Jun-2017 11:27:29 Asia/Calcutta] PHP Notice:  Undefined index: buser in /home/suncroso/public_html/courier/branchpanel/masters/banks/index.php on line 10
+[18-Jun-2017 11:27:29 Asia/Calcutta] PHP Warning:  mysql_num_fields() expects parameter 1 to be resource, boolean given in /home/suncroso/public_html/courier/libraries/classes/DBConn.php on line 254
+[18-Jun-2017 11:27:29 Asia/Calcutta] PHP Warning:  mysql_fetch_array() expects parameter 1 to be resource, boolean given in /home/suncroso/public_html/courier/libraries/classes/DBConn.php on line 260
+[18-Jun-2017 11:28:06 Asia/Calcutta] PHP Notice:  Undefined index: buser in /home/suncroso/public_html/courier/branchpanel/include/header.php on line 34
+[18-Jun-2017 11:28:06 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/suncroso/public_html/courier/branchpanel/include/header.php on line 47
+[18-Jun-2017 11:28:06 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/suncroso/public_html/courier/branchpanel/include/header.php on line 48
+[18-Jun-2017 11:28:06 Asia/Calcutta] PHP Notice:  Undefined index: buser in /home/suncroso/public_html/courier/branchpanel/masters/banks/index.php on line 10
+[18-Jun-2017 11:28:06 Asia/Calcutta] PHP Warning:  mysql_num_fields() expects parameter 1 to be resource, boolean given in /home/suncroso/public_html/courier/libraries/classes/DBConn.php on line 254
+[18-Jun-2017 11:28:06 Asia/Calcutta] PHP Warning:  mysql_fetch_array() expects parameter 1 to be resource, boolean given in /home/suncroso/public_html/courier/libraries/classes/DBConn.php on line 260
+[05-Jul-2018 19:30:57 Asia/Calcutta] PHP Notice:  Undefined index: buser in /home/couriwef/public_html/branchpanel/include/header.php on line 34
+[05-Jul-2018 19:30:57 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/include/header.php on line 47
+[05-Jul-2018 19:30:57 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/include/header.php on line 48
+[05-Jul-2018 19:30:57 Asia/Calcutta] PHP Notice:  Undefined index: buser in /home/couriwef/public_html/branchpanel/masters/banks/index.php on line 10
+[05-Jul-2018 19:30:57 Asia/Calcutta] PHP Warning:  mysql_num_fields() expects parameter 1 to be resource, boolean given in /home/couriwef/public_html/libraries/classes/DBConn.php on line 248
+[05-Jul-2018 19:30:57 Asia/Calcutta] PHP Warning:  mysql_fetch_array() expects parameter 1 to be resource, boolean given in /home/couriwef/public_html/libraries/classes/DBConn.php on line 254

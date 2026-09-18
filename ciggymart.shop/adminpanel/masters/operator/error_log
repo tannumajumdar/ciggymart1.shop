@@ -1,0 +1,30 @@
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined index: buser in /home/couriwef/public_html/branchpanel/include/header.php on line 34
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/include/header.php on line 47
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/include/header.php on line 48
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined index: id in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 10
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 79
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 86
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 93
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 97
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 98
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 105
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 114
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 121
+[21-Jul-2017 15:52:00 Asia/Calcutta] PHP Notice:  Undefined offset: 1 in /home/couriwef/public_html/branchpanel/masters/operator/edit_operator.php on line 130
+[12-Mar-2018 21:41:36 Asia/Calcutta] PHP Notice:  Undefined index: type in /home/couriwef/public_html/branchpanel/masters/operator/operator_curd.php on line 10
+[12-Mar-2018 21:41:36 Asia/Calcutta] PHP Notice:  Undefined index: type in /home/couriwef/public_html/branchpanel/masters/operator/operator_curd.php on line 30
+[12-Mar-2018 21:41:36 Asia/Calcutta] PHP Notice:  Undefined index: type in /home/couriwef/public_html/branchpanel/masters/operator/operator_curd.php on line 50
+[12-Mar-2018 21:41:36 Asia/Calcutta] PHP Notice:  Undefined index: type in /home/couriwef/public_html/branchpanel/masters/operator/operator_curd.php on line 73
+[12-Mar-2018 21:41:36 Asia/Calcutta] PHP Notice:  Undefined index: type in /home/couriwef/public_html/branchpanel/masters/operator/operator_curd.php on line 93
+[12-Mar-2018 21:41:36 Asia/Calcutta] PHP Notice:  Undefined index: type in /home/couriwef/public_html/branchpanel/masters/operator/operator_curd.php on line 127
+[12-Mar-2018 21:41:36 Asia/Calcutta] PHP Notice:  Undefined index: type in /home/couriwef/public_html/branchpanel/masters/operator/operator_curd.php on line 149
+[11-Jul-2020 12:11:54 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12
+[11-Jul-2020 12:11:54 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12
+[11-Jul-2020 12:12:04 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12
+[11-Jul-2020 12:12:04 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12
+[14-Sep-2020 20:53:39 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12
+[14-Sep-2020 20:53:39 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12
+[14-Sep-2020 21:11:24 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12
+[14-Sep-2020 21:11:24 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12
+[14-Sep-2020 21:11:41 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12
+[14-Sep-2020 21:11:41 Asia/Calcutta] PHP Deprecated:  mysql_connect(): The mysql extension is deprecated and will be removed in the future: use mysqli or PDO instead in /home4/keshriexpress/public_html/libraries/classes/DBConn.php on line 12

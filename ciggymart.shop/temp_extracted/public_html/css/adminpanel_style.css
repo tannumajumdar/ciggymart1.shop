@@ -1,0 +1,122 @@
+@charset "utf-8";
+/* CSS Document */
+ul{padding-left: 0;}
+ul li{list-style:none;}
+
+/*addimpanle css here*/
+.top-nav{margin-bottom:0;}
+.pageTitle{border-bottom:solid 1px #e4e4e4; padding:10px 15px; margin:0 0 20px 0; background:#f2f9ff}
+.pageTitle h1{font-size:16pt; margin:0;}
+
+.starthead{background:none;}
+.headPart{background-image: -webkit-gradient(linear, left top, left bottom, from(#f4f5f5), to(#dfdddd)); background-color: #f4f5f5; border-bottom:2px solid#999;}
+.title{width:350px; padding-left:20px;}
+.logout{padding:15px 50px 15px 10px; width:500px; text-decoration:none; text-align:right;}
+
+.clear{clear:both;}
+.user_style{margin-left:10px; float:right;}
+.admin_body{height:100%; width:100%; background:#d7e7ff; position:absolute;}
+.admin{width:400px ;font-size:100%; display:block; margin:170px auto; padding:20px; background:#f3f3f3; border-radius:3px;box-shadow:0 0 6px #bbc0c3;}
+.padding{padding-top:20px;}
+.flote_left{float:left;}
+.float_right{float:right;}
+.login_title{padding:10px 0 20px 0; font-size:15pt ; text-align:center;}
+.deshbord_wrth{width:800px; margin:20px auto;}
+.img_deshbord{padding:5px; margin:10px 0 12px 0; -webkit-box-shadow: 0 8px 6px -6px black;
+-moz-box-shadow: 0 8px 6px -5px #ABBAFE;
+box-shadow: 0 8px 6px -5px #ABBAFE;
+}
+.admin_text{font:italic 12pt Georgia, "Times New Roman", Times, serif; color:#00AAB3; margin-bottom:6px; text-shadow: 1px 1px 0 rgba(0,0,0,0.3);}
+.showe_dade{font:11pt Arial, Helvetica, sans-serif; color:#202020; width:200px; text-shadow: 1px 1px 0 rgba(0,0,0,0.3);}
+.mandatory span{color:red;}
+.error{color:red;font-size:0.8em;}
+
+.main{margin: 20px;}
+h4{margin: 30px 0; padding: 0 200px 15px 0; border-bottom: 1px solid #E5E5E5;}
+.BtnLeftPadd{margin-left:5px;}
+
+/*########################################*/
+/*== CSS for 3rd level dropdown menu ==*/
+/*########################################*/
+.dropdown-submenu>a:after {
+	display: block;
+	content: " ";
+	float: right;
+	width: 0;
+	height: 0;
+	border-color: transparent;
+	border-style: solid;
+	border-width: 5px 0 5px 5px;
+	border-left-color: #ccc;
+	margin-top: 5px;
+	margin-right: -10px;
+}
+.dropdown-submenu>.dropdown-menu {
+	top: 0;
+	left: 100%;
+	margin-top: -6px;
+	margin-left: -1px;
+	-webkit-border-radius: 0 6px 6px 6px;
+	-moz-border-radius: 0 6px 6px;
+	border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu {
+    position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -6px;
+    margin-left: -1px;
+    -webkit-border-radius: 0 6px 6px 6px;
+    -moz-border-radius: 0 6px 6px;
+    border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+    display: block;
+}
+.dropdown-submenu:hover>a:after {
+    border-left-color: #fff;
+}
+.dropdown-submenu.pull-left {
+    float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+    left: -100%;
+    margin-left: 10px;
+    -webkit-border-radius: 6px 0 6px 6px;
+    -moz-border-radius: 6px 0 6px 6px;
+    border-radius: 6px 0 6px 6px;
+}
+/*== eof 3rd level dropdown menu ==*/
+
+.srchBox {
+    padding: 10px;
+    background: #FBF0DB;
+    margin-bottom: 2px;
+}
+
+/*=============================*/
+/* CSS for Pagination Links */
+/*=============================*/
+.firstLink{margin-right:5px;}
+.lastLink{margin-left:5px;}
+.firstLink, .lastLink{background:#fff; padding:5px 10px; font:bold italic 12pt Georgia, "Times New Roman", Times, serif; color:#15b0ea; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.20); border-radius:5px; cursor:pointer;}
+.firstLink:hover, .lastLink:hover{background:#15b0ea; color:#fff; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.20); border-radius:5px;}
+
+.firstLink a, .firstLink a:hover, .lastLink a, .lastLink a:hover{font:bold italic 12pt Georgia, "Times New Roman", Times, serif; display:block;}
+.firstLink a, .lastLink a{color:#15b0ea;}
+.firstLink a:hover, .lastLink a:hover{color:#fff;}
+
+.Paging li{float:left;}
+.Paging li span.active{font:bold 11pt Arial, Helvetica, sans-serif; background:#15b0ea; color:#fff; padding:2px 7px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.20); }
+
+.Paging li a, .Paging li a:hover{font:bold 11pt Arial, Helvetica, sans-serif; padding:2px 7px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.20); cursor:pointer;}
+.Paging li a{background:#fff; color:#15b0ea;}
+.Paging li a:hover{background:#15b0ea; color:#fff;}
+
+.Paging li span.active, .Paging li a, .Paging li a:hover{border-radius:3px; margin:4px 2px 0 2px; display:block;}
+.previous, .next{cursor:pointer; padding:7px 5px 0 5px;}
+/*=============================*/
+/* End CSS for Pagination Links */
+/*=============================*/
