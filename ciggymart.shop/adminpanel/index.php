@@ -1,4 +1,4 @@
-﻿<?php 
+<?php 
 require('../config.php');
 include(PATH_ADMIN_INCLUDE.'/head.php');
 ?>

@@ -1,24 +1,46 @@
+DirectoryIndex index.php index.html index.htm
+Options -Indexes +FollowSymLinks
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# Ensure directories without trailing slashes redirect cleanly
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_URI} !(.*)/$
+RewriteRule ^(.*)$ $1/ [L,R=301]
+</IfModule>
+
 # php -- BEGIN cPanel-generated handler, do not edit
-# The application requires PHP 7.1 or newer (dompdf 3.x). The old ea-php56
-# handler that was here would fatal on deploy.
-# If your host does not offer ea-php82, change the number below to the version
-# it does offer (81 / 83) - or set it from cPanel > MultiPHP Manager.
+# The application needs PHP 7.1 or newer (dompdf 3.x); the previous ea-php56
+# handler would fatal. If this host does not offer ea-php82, change the number
+# below to one it does (81 / 83), or set it in cPanel > MultiPHP Manager.
 <IfModule mime_module>
   AddHandler application/x-httpd-ea-php82 .php .php5 .phtml
 </IfModule>
 # php -- END cPanel-generated handler, do not edit
 
-# --- Block the developer-only debug scripts -------------------------------
-# get_creds.php, get_creds2.php, info.php and refactor_layout.php have been
-# deleted from this folder. This rule stays as a safety net: info.php still
-# exists inside public_htmlnew.zip and temp_extracted/, so it would come back
-# if the site is ever re-deployed from that archive. Safe to remove if you
-# are sure those copies are gone.
+# --- Safety net for developer-only scripts --------------------------------
+# get_creds.php, get_creds2.php, info.php and refactor_layout.php were deleted
+# from the project. info.php still exists inside the old update archives, so
+# this keeps it unreachable if one of those is ever extracted here again.
 <FilesMatch "^(get_creds|get_creds2|info|refactor_layout)\.php$">
-  Require all denied
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
 </FilesMatch>
 
-# Don't serve source archives or the extracted backup copy.
+# Don't serve source archives, database dumps or backup copies.
 <FilesMatch "\.(zip|sql|bak|backup|old)$">
-  Require all denied
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
 </FilesMatch>

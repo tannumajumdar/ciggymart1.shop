@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require('../config.php');
 include_once(PATH_ADMIN_INCLUDE.'/header.php');
 require_once(PATH_LIBRARIES.'/classes/CourierBillingEngine.php');

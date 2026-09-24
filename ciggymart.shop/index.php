@@ -444,9 +444,9 @@ try {
                 btn.prop('disabled', true).html('<i class="fa-solid fa-circle-notch fa-spin"></i>');
 
                 $.ajax({
-                    url: 'branchpanel/check_login.php',
+                    url: 'branchpanel/check_branch_login.php',
                     type: 'POST',
-                    data: { user: user, password: password },
+                    data: { email: user, password: password },
                     success: function(data) {
                         if (data.trim() === 'true') {
                             btn.html('<i class="fa-solid fa-check"></i>');

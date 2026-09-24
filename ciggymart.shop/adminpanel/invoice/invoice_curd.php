@@ -1,4 +1,4 @@
-﻿<?php 
+<?php 
 include('../../config.php'); 
 
 require_once(PATH_LIBRARIES.'/classes/rate.php');
