@@ -8,8 +8,8 @@ $db = new DBConn();
 // We calculate outstanding by joining clients, their total invoices, and total payments.
 $sql = "SELECT 
         C.Client_Id, C.Client_Code, C.Client_Name, C.Company_Name, C.Contact_No,
-        COALESCE((SELECT SUM(Total_Amount) FROM tbl_invoices WHERE Client_Id = C.Client_Id), 0) AS Total_Billed,
-        COALESCE((SELECT SUM(Amount_Received) FROM tbl_payment_receipts WHERE Customer_Id = C.Client_Id), 0) AS Total_Paid
+        COALESCE((SELECT SUM(Final_Total_Amt) FROM tbl_invoices WHERE Client_Id = C.Client_Id), 0) AS Total_Billed,
+        COALESCE((SELECT SUM(Payment_Amount) FROM tbl_payment_receipts WHERE Client_Id = C.Client_Id), 0) AS Total_Paid
         FROM tbl_clients C 
         WHERE C.Is_Active = 1
         HAVING (Total_Billed - Total_Paid) > 0

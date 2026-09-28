@@ -1038,6 +1038,15 @@ $words[$point = $point % 10] : '';
 		}//eof else
 	
 	
+	// Full booking data for every AWB on the bill (cid values are "weight-<Consignment_Id>").
+	require_once(PATH_LIBRARIES.'/classes/InvoiceShipmentDetails.php');
+	$detailIds = array();
+	foreach ($cid as $cidval) {
+		$parts = explode('-', $cidval);
+		$detailIds[] = isset($parts[1]) ? intval($parts[1]) : 0;
+	}
+	$html2 = str_replace('</body>', InvoiceShipmentDetails::render($rateClass, $detailIds, intval($_SESSION['buser'])).'</body>', $html2);
+
 	echo $html2;
 	
 }// eof if condition for update type

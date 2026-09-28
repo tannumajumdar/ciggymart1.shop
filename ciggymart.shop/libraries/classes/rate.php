@@ -49,12 +49,16 @@ class rate extends DBConn{
 		$maxWeight = $this->getMaxWeight($clientId, $destId, $sendby, $branchId);
 		
 		$maxWeightRate = explode('-', $maxWeight);
+		// getMaxWeight() returns "" when no slab is configured for this client /
+		// service combination; PHP 8 then throws on the arithmetic below.
+		$maxSlabWeight = isset($maxWeightRate[0]) ? floatval($maxWeightRate[0]) : 0.0;
+		$maxSlabRate   = isset($maxWeightRate[1]) ? floatval($maxWeightRate[1]) : 0.0;
 		
 		// Check if the input weight is greater than 
 		// weight from DB
-		if($maxWeightRate[0] < $weight){
+		if($maxSlabWeight < $weight){
 						
-			$remainingWeight = $weight - $maxWeightRate[0];
+			$remainingWeight = $weight - $maxSlabWeight;
 			
 			// Get Branch Destination
 			//$getBranchDest=$this->ExecuteQuery("SELECT Destination_Id FROM tbl_branchs WHERE Branch_Id=".$_SESSION['buser']);
@@ -84,17 +88,20 @@ class rate extends DBConn{
 			}
 						
 			
-			if($remainingWeight < $res[1]['Additional_Weight']){
-				$toatlAdditionalAmt = $res[1]['Additional_Rate'];
-				$totalAmt = $maxWeightRate[1] + $toatlAdditionalAmt;
+			// No rate row for this client / zone / service yet: fall back to the
+			// slab rate instead of dividing by a missing Additional_Weight.
+			$addWeight = (!empty($res) && isset($res[1]['Additional_Weight'])) ? floatval($res[1]['Additional_Weight']) : 0.0;
+			$addRate   = (!empty($res) && isset($res[1]['Additional_Rate']))   ? floatval($res[1]['Additional_Rate'])   : 0.0;
+
+			if($addWeight <= 0){
+				$totalAmt = $maxSlabRate;
+			}
+			else if($remainingWeight < $addWeight){
+				$totalAmt = $maxSlabRate + $addRate;
 			}
 			else{
-				
-				$totalAdditionalWeight = $remainingWeight / $res[1]['Additional_Weight'];
-				$totalWeight = ceil($totalAdditionalWeight);
-				//$totalAdditionalWeight = ceil($remainingWeight);				
-				$toatlAdditionalAmt = $res[1]['Additional_Rate'] * $totalWeight;			
-				$totalAmt = $maxWeightRate[1] + $toatlAdditionalAmt;
+				$totalWeight = ceil($remainingWeight / $addWeight);
+				$totalAmt = $maxSlabRate + ($addRate * $totalWeight);
 			}
 			
 			
@@ -105,7 +112,9 @@ class rate extends DBConn{
 		else{
 			
 			// Get Branch Destination
-			$getBranchDest=$this->ExecuteQuery("SELECT Destination_Id FROM tbl_branchs WHERE Branch_Id=".$_SESSION['buser']);
+			// Use the $branchId argument, not $_SESSION['buser']: the admin panel
+			// has no 'buser' key, which made this query fail there.
+			$getBranchDest=$this->ExecuteQuery("SELECT Destination_Id FROM tbl_branchs WHERE Branch_Id=".intval($branchId));
 			// Get Branch State
 			$getBranchState = $this->ExecuteQuery("SELECT State_Id FROM tbl_destinations WHERE Destination_Id=".$getBranchDest[1]['Destination_Id']);		
 			// Get User Input Destination State 

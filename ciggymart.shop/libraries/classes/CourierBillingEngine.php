@@ -2,6 +2,9 @@
 require_once(dirname(__FILE__) . '/DBConn.php');
 
 class CourierBillingEngine {
+
+    /** Per-branch charge setup rows, looked up once each. */
+    private $chargeSetupCache;
     private $db;
     private $settingsCache = null;
 
@@ -104,19 +107,133 @@ class CourierBillingEngine {
     /**
      * Get applicable Pickup charge
      */
-    public function getPickupCharge($clientId = 0) {
+    public function getPickupCharge($clientId = 0, $zoneId = 0) {
         $defaultPickup = floatval($this->getSetting('default_pickup_charge', 0.00));
         if ($clientId > 0) {
+            // Zone-wise rate wins when one is configured for this client+zone.
+            if ($zoneId > 0) {
+                $zoneRow = $this->db->ExecuteQuery("SELECT Default_Charge FROM tbl_pickup_charges
+                    WHERE Client_Id=".intval($clientId)." AND Zone_Id=".intval($zoneId)." AND Is_Active=1");
+                if (!empty($zoneRow) && isset($zoneRow[1]['Default_Charge'])) {
+                    return floatval($zoneRow[1]['Default_Charge']);
+                }
+            }
             $res = $this->db->ExecuteQuery("SELECT Pickup_Charge FROM tbl_clients WHERE Client_Id=".intval($clientId));
             if (!empty($res) && isset($res[1]['Pickup_Charge']) && floatval($res[1]['Pickup_Charge']) > 0) {
                 return floatval($res[1]['Pickup_Charge']);
             }
-            $res2 = $this->db->ExecuteQuery("SELECT Default_Charge FROM tbl_pickup_charges WHERE Client_Id=".intval($clientId)." AND Is_Active=1");
+            // Client-wide fallback row (Zone_Id NULL / 0).
+            $res2 = $this->db->ExecuteQuery("SELECT Default_Charge FROM tbl_pickup_charges
+                WHERE Client_Id=".intval($clientId)." AND (Zone_Id IS NULL OR Zone_Id=0) AND Is_Active=1");
             if (!empty($res2) && isset($res2[1]['Default_Charge'])) {
                 return floatval($res2[1]['Default_Charge']);
             }
         }
         return $defaultPickup;
+    }
+
+    /**
+     * Zone of a destination city, used for zone-wise pickup rates.
+     */
+    public function getDestinationZone($destId = 0) {
+        if ($destId <= 0) {
+            return 0;
+        }
+        $res = $this->db->ExecuteQuery("SELECT S.Zone_Id FROM tbl_destinations D
+            INNER JOIN tbl_states S ON S.State_Id = D.State_Id
+            WHERE D.Destination_Id=".intval($destId));
+        return (!empty($res) && isset($res[1]['Zone_Id'])) ? intval($res[1]['Zone_Id']) : 0;
+    }
+
+    /**
+     * Rate-master charge setup for a company (fuel / insurance / FOV / urgent).
+     * Returns an empty array when nothing is configured, so callers fall back
+     * to the global settings.
+     */
+    public function getChargeSetup($branchId = 0) {
+        if ($branchId <= 0) {
+            return array();
+        }
+        if (!isset($this->chargeSetupCache)) {
+            $this->chargeSetupCache = array();
+        }
+        if (isset($this->chargeSetupCache[$branchId])) {
+            return $this->chargeSetupCache[$branchId];
+        }
+        $res = $this->db->ExecuteQuery("SELECT * FROM tbl_charge_master WHERE Branch_Id=".intval($branchId)." AND Is_Active=1");
+        $row = (!empty($res) && isset($res[1])) ? $res[1] : array();
+        $this->chargeSetupCache[$branchId] = $row;
+        return $row;
+    }
+
+    /**
+     * Urgent / express surcharge, applied when Send_By is 3 (Urgent).
+     */
+    public function calculateUrgent($freight, $branchId = 0) {
+        $setup = $this->getChargeSetup($branchId);
+        $pct = isset($setup['Urgent_Percent']) ? floatval($setup['Urgent_Percent']) : 0.0;
+        $min = isset($setup['Urgent_Minimum']) ? floatval($setup['Urgent_Minimum']) : 0.0;
+        if ($pct <= 0 && $min <= 0) {
+            return 0.0;
+        }
+        return round(max((floatval($freight) * $pct) / 100, $min), 2);
+    }
+
+    /**
+     * FOV (carrier risk / freight-on-value): a percentage of the declared
+     * value, subject to a minimum. Zero when nothing is declared.
+     */
+    public function calculateFOV($declaredValue = 0, $percent = null, $minimum = null, $branchId = 0) {
+        $declaredValue = floatval($declaredValue);
+        if ($declaredValue <= 0) {
+            return ['fov_percent' => 0.0, 'fov_minimum' => 0.0, 'fov_charge' => 0.0];
+        }
+        $setup = $this->getChargeSetup($branchId);
+        if ($percent === null && isset($setup['FOV_Percent']) && floatval($setup['FOV_Percent']) > 0) {
+            $percent = $setup['FOV_Percent'];
+        }
+        if ($minimum === null && isset($setup['FOV_Minimum'])) {
+            $minimum = $setup['FOV_Minimum'];
+        }
+        $pct = ($percent === null) ? floatval($this->getSetting('default_fov_percent', 0.20)) : floatval($percent);
+        $min = ($minimum === null) ? floatval($this->getSetting('default_fov_minimum', 100.00)) : floatval($minimum);
+        $calc = ($declaredValue * $pct) / 100;
+        return [
+            'fov_percent' => $pct,
+            'fov_minimum' => $min,
+            'fov_charge'  => round(max($calc, $min), 2)
+        ];
+    }
+
+    /**
+     * Fuel surcharge percentage: the client's own rate, else the global default.
+     */
+    public function getFuelPercent($clientId = 0, $branchId = 0) {
+        $setup = $this->getChargeSetup($branchId);
+        if (isset($setup['Fuel_Percent']) && floatval($setup['Fuel_Percent']) > 0) {
+            return floatval($setup['Fuel_Percent']);
+        }
+        if ($clientId > 0) {
+            $res = $this->db->ExecuteQuery("SELECT Fuel_Surcharge FROM tbl_clients WHERE Client_Id=".intval($clientId));
+            if (!empty($res) && isset($res[1]['Fuel_Surcharge']) && floatval($res[1]['Fuel_Surcharge']) > 0) {
+                return floatval($res[1]['Fuel_Surcharge']);
+            }
+        }
+        return floatval($this->getSetting('default_fuel_percent', 0.00));
+    }
+
+    /**
+     * Whether the client is billed within the branch's state (CGST+SGST) or
+     * across states (IGST).
+     */
+    public function isWithinState($clientId = 0) {
+        if ($clientId > 0) {
+            $res = $this->db->ExecuteQuery("SELECT GST_Within_State FROM tbl_clients WHERE Client_Id=".intval($clientId));
+            if (!empty($res) && isset($res[1]['GST_Within_State'])) {
+                return intval($res[1]['GST_Within_State']) == 1;
+            }
+        }
+        return true;
     }
 
     /**
@@ -245,11 +362,14 @@ class CourierBillingEngine {
         $freightAfterDiscount = max(0, $baseFreight - $discountAmt);
 
         // Additional Charges
-        $pickupCharge = isset($data['pickup_charge']) ? floatval($data['pickup_charge']) : $this->getPickupCharge($clientId);
+        $zoneId = isset($data['zone_id']) ? intval($data['zone_id']) : $this->getDestinationZone($destId);
+        $pickupCharge = isset($data['pickup_charge']) ? floatval($data['pickup_charge']) : $this->getPickupCharge($clientId, $zoneId);
         $doorCharge = isset($data['door_charge']) ? floatval($data['door_charge']) : $this->getDoorDeliveryCharge($destId, $clientId);
         $docketCharge = isset($data['docket_charge']) ? floatval($data['docket_charge']) : $this->getDocketCharge($clientId);
         
-        $oda = $this->checkODA($destId, isset($data['dest_name']) ? $data['dest_name'] : '', isset($data['pincode']) ? $data['pincode'] : '');
+        // The booking form sends the delivery pincode as consignee_pincode.
+        $odaPincode = isset($data['pincode']) ? $data['pincode'] : (isset($data['consignee_pincode']) ? $data['consignee_pincode'] : '');
+        $oda = $this->checkODA($destId, isset($data['dest_name']) ? $data['dest_name'] : '', $odaPincode);
         $odaCharge = isset($data['oda_charge']) ? floatval($data['oda_charge']) : ($oda['is_oda'] ? $oda['oda_charge'] : 0.0);
 
         // Insurance
@@ -260,9 +380,50 @@ class CourierBillingEngine {
 
         $otherCharges = isset($data['other_charges']) ? floatval($data['other_charges']) : 0.0;
 
+        // FOV (carrier risk on declared value)
+        $declaredValue = isset($data['insured_value']) ? floatval($data['insured_value']) : 0.0;
+        $fovCalc = $this->calculateFOV($declaredValue, null, null, $branchId);
+        $fovCharge = isset($data['fov_charge']) ? floatval($data['fov_charge']) : $fovCalc['fov_charge'];
+
+        // Urgent / express surcharge (Send_By 3), from the company's rate master
+        $urgentCharge = isset($data['urgent_charge'])
+            ? floatval($data['urgent_charge'])
+            : (($sendBy == 3) ? $this->calculateUrgent($freightAfterDiscount, $branchId) : 0.0);
+
+        // Fuel surcharge, charged on the freight only
+        $fuelPercent = isset($data['fuel_percent']) ? floatval($data['fuel_percent']) : $this->getFuelPercent($clientId, $branchId);
+        $fuelCharge = isset($data['fuel_charge'])
+            ? floatval($data['fuel_charge'])
+            : round(($freightAfterDiscount * $fuelPercent) / 100, 2);
+
+        /*
+         * Total_Amount stays pre-tax and excludes fuel, because invoice
+         * generation sums Total_Amount and then applies fuel + GST itself.
+         * Changing it here would double-charge on every invoice.
+         */
         $totalAmount = $freightAfterDiscount + $pickupCharge + $doorCharge + $docketCharge + $odaCharge + $insuranceCharge + $otherCharges;
 
+        // Consignment-level taxable value and GST, stored for the AWB itself.
+        $taxableAmount = round($totalAmount + $fovCharge + $fuelCharge + $urgentCharge, 2);
+        $withinState = isset($data['within_state'])
+            ? (intval($data['within_state']) == 1)
+            : $this->isWithinState($clientId);
+        $hsnCode = isset($data['hsn_code']) && $data['hsn_code'] !== '' ? $data['hsn_code'] : '996812';
+        $gst = $this->computeGST($taxableAmount, $withinState, $hsnCode);
+
         return [
+            'zone_id' => $zoneId,
+            'fov_details' => $fovCalc,
+            'fov_charge' => $fovCharge,
+            'urgent_charge' => $urgentCharge,
+            'fuel_percent' => $fuelPercent,
+            'fuel_charge' => $fuelCharge,
+            'taxable_amount' => $taxableAmount,
+            'gst_details' => $gst,
+            'cgst_amount' => $gst['cgst_amount'],
+            'sgst_amount' => $gst['sgst_amount'],
+            'igst_amount' => $gst['igst_amount'],
+            'grand_total' => $gst['grand_total'],
             'weight_details' => $weightCalc,
             'base_freight' => $baseFreight,
             'discount_percent' => $discountPercent,

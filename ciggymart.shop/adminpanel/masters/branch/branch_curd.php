@@ -158,15 +158,18 @@ $paththumbimg = ROOT."/image_upload/franchise/thumb/";
 if($_POST['type']=="addBranch")
 {
 	
-	$imgname = $_FILES['franchise_logo']['name'];
-		
-	$imgextension = explode('.',$imgname);
-	$newimgname = time().'.'.$imgextension[1];
-	
-	$tmp = $_FILES['franchise_logo']['tmp_name'];
+	// The logo is optional; without this guard an upload-less submit warned on
+	// $_FILES and then built a filename from a missing extension.
+	$imgname = isset($_FILES['franchise_logo']['name']) ? $_FILES['franchise_logo']['name'] : '';
+	$imgextension = explode('.', $imgname);
+	$newimgname = (count($imgextension) > 1 && $imgname !== '')
+		? time() . '.' . end($imgextension)
+		: '';
+
+	$tmp = isset($_FILES['franchise_logo']['tmp_name']) ? $_FILES['franchise_logo']['tmp_name'] : '';
 	//move_uploaded_file($tmp, $path.$newimgname);
 	
-	if(move_uploaded_file($tmp, $path.$newimgname))
+	if($newimgname !== '' && is_uploaded_file($tmp) && move_uploaded_file($tmp, $path.$newimgname))
     {
 	  // move the image in the thumb folder
 	  $resizeObj1 = new resize($path.$newimgname);
@@ -180,8 +183,15 @@ if($_POST['type']=="addBranch")
 	
 	try
 	{	//Insert New Branch
-		$res=mysql_query("INSERT INTO tbl_branchs (Branch_Code, Branch_Name, Franchise_Name, Franchise_Logo, Contact_Person, Address, Destination_Id, GSTIN, Service_Tax_No, PAN_No, Contact_No, Email, Password, Is_Active)
-	values('".$_POST['branch_code']."','".$_POST['branch_name']."','".$_POST['franchise_name']."','".$newimgname."','".$_POST['cont_person']."','".$_POST['address']."',".$_POST['dest_id'].",'".$_POST['gstNo']."','".$_POST['serv_tax_no']."','".$_POST['panNo']."','".$_POST['phone_no']."','".$_POST['email']."','".$_POST['password']."', 1)");
+		$pincode   = isset($_POST['pincode']) ? $_POST['pincode'] : '';
+		$invStart  = isset($_POST['invoice_start_no']) && $_POST['invoice_start_no'] !== '' ? intval($_POST['invoice_start_no']) : 1;
+		// Empty "valid till" means no expiry, stored as NULL.
+		$validTill = (!empty($_POST['valid_till']))
+			? "'" . date('Y-m-d', strtotime($_POST['valid_till'])) . "'"
+			: "NULL";
+
+		$res=mysql_query("INSERT INTO tbl_branchs (Branch_Code, Branch_Name, Franchise_Name, Franchise_Logo, Contact_Person, Address, Destination_Id, GSTIN, Service_Tax_No, PAN_No, Contact_No, Email, Password, Pincode, Invoice_Start_No, Valid_Till, Is_Active)
+	values('".$_POST['branch_code']."','".$_POST['branch_name']."','".$_POST['franchise_name']."','".$newimgname."','".$_POST['cont_person']."','".$_POST['address']."',".$_POST['dest_id'].",'".$_POST['gstNo']."','".$_POST['serv_tax_no']."','".$_POST['panNo']."','".$_POST['phone_no']."','".$_POST['email']."','".$_POST['password']."','".$pincode."',".$invStart.",".$validTill.", 1)");
 	
 		if(!$res)
 		{

@@ -1895,3 +1895,24 @@ body.sidebar-open .sidebar-backdrop {
     grid-template-columns: 1fr;
   }
 }
+
+/* Consignment booking: per-field lock (js/consignment_lock.js) */
+.fld-lock {
+  margin-left: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  text-decoration: none;
+}
+.fld-lock:hover,
+.fld-lock:focus { color: #2563eb; text-decoration: none; }
+.fld-lock.on { color: #d97706; }
+.form-control.is-locked {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+select.form-control.is-locked { pointer-events: none; }
+.calc-readout {
+  background: #f1f5f9 !important;
+  font-weight: 700;
+  color: #0f172a;
+}

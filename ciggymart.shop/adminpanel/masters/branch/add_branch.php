@@ -105,6 +105,27 @@ $(document).ready(function(){
             <input type="text" class="form-control input-sm" id="panNo" name="panNo" placeholder="PAN No"  />
           </div>
         </div>
+
+        <div class="form-group custom-fg">
+          <label class="control-label col-sm-3" for="pincode">PIN Code :</label>
+          <div class="col-sm-3">
+            <input type="text" class="form-control input-sm" id="pincode" name="pincode" placeholder="6-digit PIN code" />
+          </div>
+        </div>
+
+        <div class="form-group custom-fg">
+          <label class="control-label col-sm-3" for="invoice_start_no">Invoice Start No :</label>
+          <div class="col-sm-3">
+            <input type="number" min="1" class="form-control input-sm" id="invoice_start_no" name="invoice_start_no" value="1" placeholder="e.g. 1" />
+          </div>
+        </div>
+
+        <div class="form-group custom-fg">
+          <label class="control-label col-sm-3" for="valid_till">Valid Till :</label>
+          <div class="col-sm-3">
+            <input type="text" class="form-control input-sm datepick" id="valid_till" name="valid_till" placeholder="dd-mm-yyyy" />
+          </div>
+        </div>
         
         <div class="form-group custom-fg">
           <label class="control-label col-sm-3" for="gstNo">GSTIN No :</label>
@@ -175,3 +196,6 @@ $(document).ready(function(){
   </div>
 </div>
 
+<script>
+$(function(){ $(".datepick").datepicker({ dateFormat: "dd-mm-yy", changeMonth: true, changeYear: true, yearRange: "-0:+10" }); });
+</script>

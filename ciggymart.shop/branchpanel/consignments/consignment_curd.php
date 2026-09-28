@@ -158,6 +158,18 @@ if(isset($_POST['type']) && $_POST['type']=="getSubtotal")
 ///*******************************************************
 if(isset($_POST['type']) && $_POST['type']=="addConsignment")
 {
+	// Locked AWB numbers auto-increment on the form, so guard against a clash here.
+	$awb = $db->escape(trim(isset($_POST['consignment_no']) ? $_POST['consignment_no'] : ''));
+	if ($awb === '') {
+		echo 'AWB number is required.';
+		exit();
+	}
+	$dup = $db->ExecuteQuery("SELECT Consignment_Id FROM tbl_consignments WHERE Consignment_No='$awb' AND Branch_Id=$branchId LIMIT 1");
+	if (!empty($dup)) {
+		echo 'AWB number '.$_POST['consignment_no'].' is already booked.';
+		exit();
+	}
+
 	$_POST['branch_id'] = $branchId;
 	$calc = $billing->computeBookingCharges($_POST);
 
@@ -165,7 +177,8 @@ if(isset($_POST['type']) && $_POST['type']=="addConsignment")
 	$date = date('Y-m-d', strtotime($rawdate));
 
 	$isInsured = (!empty($_POST['is_insured']) && $_POST['is_insured'] == 1) ? 1 : 0;
-	$insuredValue = $isInsured ? floatval($_POST['insured_value']) : 0.0;
+	// Declared value is stored even when uninsured, because FOV is charged on it.
+	$insuredValue = isset($_POST['insured_value']) ? floatval($_POST['insured_value']) : 0.0;
 	$insuranceCharge = $calc['insurance_charge'];
 	$otherCharges = floatval($calc['other_charges']);
 	$insuranceOtherCharges = $insuranceCharge + $otherCharges;
@@ -178,7 +191,10 @@ if(isset($_POST['type']) && $_POST['type']=="addConsignment")
 		'Pickup_Charge', 'Door_Delivery_Charge', 'Docket_Charge', 'ODA_Charge', 'Insurance_Charge',
 		'Other_Charges', 'Insurance_Other_Charges', 'Client_id', 'Branch_Id', 'Date_Of_Submit',
 		'Consignee_Name', 'Consignee_Address', 'Consignee_City', 'Consignee_Mobile', 'Consignee_Pincode',
-		'Is_Insured', 'Insurance_Provider', 'Insurance_Policy_No'
+		'Is_Insured', 'Insurance_Provider', 'Insurance_Policy_No',
+		'FOV_Charge', 'Fuel_Charge', 'Fuel_Percent',
+		'CGST_Amount', 'SGST_Amount', 'IGST_Amount', 'Taxable_Amount', 'Grand_Total',
+		'Origin_City', 'Origin_Pincode', 'Courier_Partner_Id'
 	];
 
 	$values = [
@@ -218,7 +234,18 @@ if(isset($_POST['type']) && $_POST['type']=="addConsignment")
 		isset($_POST['consignee_pincode']) ? $_POST['consignee_pincode'] : '',
 		$isInsured,
 		isset($_POST['insurance_provider']) ? $_POST['insurance_provider'] : '',
-		isset($_POST['insurance_policy_no']) ? $_POST['insurance_policy_no'] : ''
+		isset($_POST['insurance_policy_no']) ? $_POST['insurance_policy_no'] : '',
+		$calc['fov_charge'],
+		$calc['fuel_charge'],
+		$calc['fuel_percent'],
+		$calc['cgst_amount'],
+		$calc['sgst_amount'],
+		$calc['igst_amount'],
+		$calc['taxable_amount'],
+		$calc['grand_total'],
+		isset($_POST['origin_city']) ? $_POST['origin_city'] : '',
+		isset($_POST['origin_pincode']) ? $_POST['origin_pincode'] : '',
+		isset($_POST['courier_partner_id']) ? intval($_POST['courier_partner_id']) : 0
 	];
 
 	$res = $db->valInsert('tbl_consignments', $fields, $values);
@@ -238,7 +265,8 @@ if(isset($_POST['type']) && $_POST['type']=="editConsignment")
 	$date = date('Y-m-d', strtotime($rawdate));
 
 	$isInsured = (!empty($_POST['is_insured']) && $_POST['is_insured'] == 1) ? 1 : 0;
-	$insuredValue = $isInsured ? floatval($_POST['insured_value']) : 0.0;
+	// Declared value is stored even when uninsured, because FOV is charged on it.
+	$insuredValue = isset($_POST['insured_value']) ? floatval($_POST['insured_value']) : 0.0;
 	$insuranceCharge = $calc['insurance_charge'];
 	$otherCharges = floatval($calc['other_charges']);
 	$insuranceOtherCharges = $insuranceCharge + $otherCharges;
@@ -251,7 +279,10 @@ if(isset($_POST['type']) && $_POST['type']=="editConsignment")
 		'Pickup_Charge', 'Door_Delivery_Charge', 'Docket_Charge', 'ODA_Charge', 'Insurance_Charge',
 		'Other_Charges', 'Insurance_Other_Charges', 'Client_id', 'Date_Of_Submit',
 		'Consignee_Name', 'Consignee_Address', 'Consignee_City', 'Consignee_Mobile', 'Consignee_Pincode',
-		'Is_Insured', 'Insurance_Provider', 'Insurance_Policy_No'
+		'Is_Insured', 'Insurance_Provider', 'Insurance_Policy_No',
+		'FOV_Charge', 'Fuel_Charge', 'Fuel_Percent',
+		'CGST_Amount', 'SGST_Amount', 'IGST_Amount', 'Taxable_Amount', 'Grand_Total',
+		'Origin_City', 'Origin_Pincode', 'Courier_Partner_Id'
 	];
 
 	$values = [
@@ -290,7 +321,18 @@ if(isset($_POST['type']) && $_POST['type']=="editConsignment")
 		isset($_POST['consignee_pincode']) ? $_POST['consignee_pincode'] : '',
 		$isInsured,
 		isset($_POST['insurance_provider']) ? $_POST['insurance_provider'] : '',
-		isset($_POST['insurance_policy_no']) ? $_POST['insurance_policy_no'] : ''
+		isset($_POST['insurance_policy_no']) ? $_POST['insurance_policy_no'] : '',
+		$calc['fov_charge'],
+		$calc['fuel_charge'],
+		$calc['fuel_percent'],
+		$calc['cgst_amount'],
+		$calc['sgst_amount'],
+		$calc['igst_amount'],
+		$calc['taxable_amount'],
+		$calc['grand_total'],
+		isset($_POST['origin_city']) ? $_POST['origin_city'] : '',
+		isset($_POST['origin_pincode']) ? $_POST['origin_pincode'] : '',
+		isset($_POST['courier_partner_id']) ? intval($_POST['courier_partner_id']) : 0
 	];
 
 	$condition = "Consignment_Id=" . intval($_POST['consignment_id']);

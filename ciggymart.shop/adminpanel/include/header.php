@@ -93,6 +93,8 @@ $sampleConsignments = array(
                 <li class="menu-category">BILLING</li>
                 <li ><a href="<?php echo PATH_ADMIN_LINK; ?>/masters/client"><i class="fa fa-users"></i> Customers</a></li>
                 <li ><a href="<?php echo PATH_ADMIN_LINK; ?>/masters/rate"><i class="fa fa-table"></i> Rate Master</a></li>
+                <li ><a href="<?php echo PATH_ADMIN_LINK; ?>/masters/charges"><i class="fa fa-sliders"></i> Pickup &amp; Charges Setup</a></li>
+                <li ><a href="<?php echo PATH_ADMIN_LINK; ?>/masters/oda"><i class="fa fa-map-signs"></i> ODA Charges</a></li>
                 <li ><a href="<?php echo PATH_ADMIN_LINK; ?>/invoice/"><i class="fa fa-file-text-o"></i> Invoices</a></li>
                 
                 <li class="menu-category">ACCOUNTING</li>
