@@ -162,7 +162,7 @@ $partners = $db->ExecuteQuery("SELECT Partner_Id, Partner_Name FROM tbl_courier_
                                         <option value="<?php echo $dst['Destination_Id']; ?>"
                                                 data-name="<?php echo htmlspecialchars($dst['Destination_Name']); ?>"
                                                 data-pincode="<?php echo htmlspecialchars($dst['Pincode']); ?>">
-                                            <?php echo htmlspecialchars($dst['Destination_Name']); ?> (<?php echo htmlspecialchars($dst['State_Name']); ?>)
+                                            <?php echo htmlspecialchars($dst['Destination_Name']); ?> (<?php echo htmlspecialchars($dst['State_Name']); ?>)<?php if (!empty($dst['Pincode'])) echo ' - '.htmlspecialchars($dst['Pincode']); ?>
                                         </option>
                                     <?php } ?>
                                 </select>
@@ -409,6 +409,20 @@ $(document).ready(function() {
             $("#consignee_pincode").val(opt.data("pincode") || "");
         }
         scheduleRecalc();
+    });
+
+    // Typing a 6-digit delivery pincode selects the matching destination.
+    $("#consignee_pincode").on("input", function() {
+        var pin = $.trim($(this).val());
+        if (!/^\d{6}$/.test(pin)) return;
+        if (typeof FieldLock !== "undefined" && FieldLock.isLocked("dest_id")) return;
+        var match = $("#dest_id option").filter(function() {
+            return String($(this).data("pincode")) === pin;
+        }).first();
+        if (match.length && $("#dest_id").val() !== match.val()) {
+            $("#dest_id").val(match.val());
+            scheduleRecalc();
+        }
     });
 
     // Volumetric / chargeable weight, shown instantly; the server recomputes on save.

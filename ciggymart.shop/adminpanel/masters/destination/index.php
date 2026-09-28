@@ -4,7 +4,32 @@ require_once(PATH_LIBRARIES.'/classes/DBConn.php');
 include(PATH_ADMIN_INCLUDE.'/header.php');
 $db = new DBConn();
 
-$destList = $db->ExecuteQuery("SELECT D.*, S.State_Name FROM tbl_destinations D INNER JOIN tbl_states S ON S.State_Id = D.State_Id ORDER BY D.Destination_Name ASC");
+// Search and paginate on the server: the master holds ~22k pincodes.
+$perPage = 50;
+$q = isset($_GET['q']) ? trim($_GET['q']) : '';
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$where = '';
+if ($q !== '') {
+    // Every word must match some column, so "New Delhi (Delhi) - 110017"
+    // (the label shown in the consignment dropdown) finds that pincode.
+    $conds = array();
+    foreach (preg_split('/[^A-Za-z0-9]+/', $q, -1, PREG_SPLIT_NO_EMPTY) as $word) {
+        $w = $db->escape($word);
+        $conds[] = "(D.Destination_Name LIKE '%$w%' OR D.Destination_Code LIKE '$w%' OR D.Pincode LIKE '$w%' OR S.State_Name LIKE '%$w%')";
+    }
+    if (!empty($conds)) {
+        $where = 'WHERE ' . implode(' AND ', $conds);
+    }
+}
+$countRes = $db->ExecuteQuery("SELECT COUNT(*) AS Total FROM tbl_destinations D INNER JOIN tbl_states S ON S.State_Id = D.State_Id $where");
+$totalRows = !empty($countRes) ? intval($countRes[1]['Total']) : 0;
+$totalPages = max(1, (int)ceil($totalRows / $perPage));
+$page = min($page, $totalPages);
+$offset = ($page - 1) * $perPage;
+$destList = $db->ExecuteQuery("SELECT D.*, S.State_Name FROM tbl_destinations D INNER JOIN tbl_states S ON S.State_Id = D.State_Id $where ORDER BY D.Destination_Name ASC, D.Pincode ASC LIMIT $offset, $perPage");
+function destPageUrl($p, $q) {
+    return 'index.php?' . http_build_query(array_filter(array('q' => $q, 'page' => $p > 1 ? $p : null)));
+}
 $states = $db->ExecuteQuery("SELECT State_Id, State_Code, State_Name FROM tbl_states ORDER BY State_Name ASC");
 ?>
 
@@ -25,10 +50,12 @@ $states = $db->ExecuteQuery("SELECT State_Id, State_Code, State_Name FROM tbl_st
 
     <div class="erp-card">
         <div class="erp-card-header">
-            <h3 class="erp-card-title"><i class="fa fa-list"></i> Registered Destinations (<?php echo count($destList); ?>)</h3>
-            <div class="pull-right">
-                <input type="text" id="destSearch" class="form-control input-sm" placeholder="Search City, Code or Pincode..." style="width: 250px; display:inline-block;">
-            </div>
+            <h3 class="erp-card-title"><i class="fa fa-list"></i> Registered Destinations (<?php echo number_format($totalRows); ?>)</h3>
+            <form method="get" class="pull-right" style="margin:0;">
+                <input type="text" name="q" value="<?php echo htmlspecialchars($q); ?>" class="form-control input-sm" placeholder="Search City, Code, State or Pincode..." style="width: 250px; display:inline-block;">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-search"></i></button>
+                <?php if ($q !== '') { ?><a href="index.php" class="btn btn-default btn-sm">Clear</a><?php } ?>
+            </form>
         </div>
         <div class="erp-table-responsive">
             <table class="erp-table" id="destTable">
@@ -47,7 +74,7 @@ $states = $db->ExecuteQuery("SELECT State_Id, State_Code, State_Name FROM tbl_st
                 </thead>
                 <tbody>
                     <?php if (!empty($destList) && count($destList) > 0) {
-                        $i = 1;
+                        $i = $offset + 1;
                         foreach ($destList as $d) { ?>
                             <tr>
                                 <td><?php echo $i; ?></td>
@@ -78,6 +105,22 @@ $states = $db->ExecuteQuery("SELECT State_Id, State_Code, State_Name FROM tbl_st
                 </tbody>
             </table>
         </div>
+        <?php if ($totalPages > 1) { ?>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; font-size:13px; color:#64748b;">
+            <span>Showing <?php echo $offset + 1; ?>&ndash;<?php echo min($offset + $perPage, $totalRows); ?> of <?php echo number_format($totalRows); ?></span>
+            <div>
+                <?php if ($page > 1) { ?>
+                    <a href="<?php echo destPageUrl(1, $q); ?>" class="btn btn-default btn-xs">&laquo; First</a>
+                    <a href="<?php echo destPageUrl($page - 1, $q); ?>" class="btn btn-default btn-xs">&lsaquo; Prev</a>
+                <?php } ?>
+                <span style="margin:0 8px;">Page <?php echo $page; ?> of <?php echo $totalPages; ?></span>
+                <?php if ($page < $totalPages) { ?>
+                    <a href="<?php echo destPageUrl($page + 1, $q); ?>" class="btn btn-default btn-xs">Next &rsaquo;</a>
+                    <a href="<?php echo destPageUrl($totalPages, $q); ?>" class="btn btn-default btn-xs">Last &raquo;</a>
+                <?php } ?>
+            </div>
+        </div>
+        <?php } ?>
     </div>
 </div>
 
@@ -145,13 +188,6 @@ $states = $db->ExecuteQuery("SELECT State_Id, State_Code, State_Name FROM tbl_st
 
 <script>
 $(document).ready(function() {
-    $("#destSearch").on("keyup", function() {
-        var val = $(this).val().toLowerCase();
-        $("#destTable tbody tr").filter(function() {
-            $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1);
-        });
-    });
-
     $("#addDestForm").submit(function(e) {
         e.preventDefault();
         var formData = $(this).serialize() + "&type=addDestination";

@@ -31,7 +31,6 @@ if (!empty($zpRows)) {
         $zoneRates[$zr['Client_Id'] . '|' . $zr['Zone_Id']] = $zr['Default_Charge'];
     }
 }
-$destinations = $db->ExecuteQuery("SELECT Destination_Id, Destination_Name, Destination_Code, Door_Delivery_Charge, ODA_Charge, Is_ODA FROM tbl_destinations ORDER BY Destination_Name ASC");
 $settings = $db->ExecuteQuery("SELECT Setting_Key, Setting_Value FROM tbl_settings");
 $setMap = [];
 foreach ($settings as $s) {
